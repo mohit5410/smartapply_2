@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartApply — Amity University</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📝</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',-apple-system,sans-serif;background:#f5f6fa;color:#1a1a1a;min-height:100vh}input,select,textarea,button{font-family:inherit}button{cursor:pointer;transition:all .15s}button:hover{filter:brightness(.95)}
+.login-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e293b,#0f172a)}
+.card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.inp{width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:14px;outline:0;box-sizing:border-box}.inp:focus{border-color:#2563eb;box-shadow:0 0 0 3px #2563eb15}.sel{width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid #d1d5db;font-size:14px;outline:0;background:#fff;box-sizing:border-box}.btn{padding:12px 24px;border-radius:10px;border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer}.badge{padding:3px 10px;border-radius:16px;font-size:11px;font-weight:600;white-space:nowrap;display:inline-block}.stat{background:#fff;border-radius:12px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.item{background:#fff;border-radius:10px;padding:13px 18px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #f0f0f0;transition:all .15s}.item:hover{box-shadow:0 4px 12px rgba(0,0,0,.08);transform:translateY(-1px)}.info{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 16px}.hdr{background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:6px}.lbl{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:3px}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:100;max-width:420px;display:flex;align-items:center;gap:8px;color:#fff;animation:si .3s}@keyframes si{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.gs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.upload-zone{background:#f8fafc;border:2px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s}.upload-zone:hover{border-color:#2563eb;background:#eff6ff}
+.modal-bg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50}.modal{background:#fff;border-radius:16px;padding:28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.role-card{padding:12px 16px;border-radius:10px;border:2px solid #e5e7eb;cursor:pointer;transition:all .15s;text-align:left;width:100%;background:white}.role-card:hover{border-color:#2563eb;background:#eff6ff}
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app" style="display:flex;align-items:center;justify-content:center;min-height:100vh"><div class="spinner" style="width:32px;height:32px;border-width:3px;border-color:#2563eb33;border-top-color:#2563eb"></div></div>
+<script>
+const API={token:localStorage.getItem('sa_token'),async req(m,p,b,isF){const o={method:m,headers:{}};if(this.token)o.headers['Authorization']='Bearer '+this.token;if(b&&!isF){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}if(b&&isF)o.body=b;const r=await fetch('/api'+p,o);const d=await r.json();if(!r.ok)throw new Error(d.error||'Failed');return d},get(p){return this.req('GET',p)},post(p,b){return this.req('POST',p,b)},del(p){return this.req('DELETE',p)},upload(p,f){return this.req('POST',p,f,true)},setToken(t){this.token=t;if(t)localStorage.setItem('sa_token',t);else localStorage.removeItem('sa_token')}};
+
+const DEPTS={dept_ite:{name:"Department of IT & Engineering",short:"IT & Engg",color:"#2563eb"},dept_mss:{name:"Department of Management and Social Sciences",short:"Mgmt & SS",color:"#7c3aed"},dept_ifs:{name:"Department of International Foundation Studies",short:"Intl. Foundation",color:"#0891b2"}};
+const PROGS={"B.TECH(CSE)":{dept:"dept_ite",sem:8},"B.Sc.(IT)":{dept:"dept_ite",sem:6},"BBA":{dept:"dept_mss",sem:6},"BATA":{dept:"dept_mss",sem:6},"BA.(Economics)":{dept:"dept_mss",sem:6},"IFS":{dept:"dept_ifs",sem:4}};
+const SECS=["A","B","C"];
+const RINFO={admin:{label:"Admin",color:"#dc2626",icon:"⚙️"},student:{label:"Student",color:"#2563eb",icon:"🎓"},coordinator:{label:"Coordinator",color:"#f59e0b",icon:"📋"},pl:{label:"Program Leader",color:"#7c3aed",icon:"📊"},hod:{label:"HOD",color:"#be123c",icon:"🏛️"}};
+const STAT={pending_coordinator:{label:"Pending Coordinator",color:"#f59e0b",bg:"#fef3c7"},rejected_coordinator:{label:"Rejected by Coordinator",color:"#ef4444",bg:"#fee2e2"},pending_pl:{label:"Pending Program Leader",color:"#7c3aed",bg:"#ede9fe"},rejected_pl:{label:"Rejected by PL",color:"#ef4444",bg:"#fee2e2"},pending_hod:{label:"Pending HOD",color:"#be123c",bg:"#fce7f3"},rejected_hod:{label:"Rejected by HOD",color:"#ef4444",bg:"#fee2e2"},approved:{label:"Approved ✓",color:"#16a34a",bg:"#dcfce7"}};
+const fd=d=>new Date(d).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+const td=()=>new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+
+function h(t,a,...c){const e=document.createElement(t);if(a)Object.entries(a).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(e.style,v);else if(k.startsWith("on"))e.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="className")e.className=v;else if(k==="innerHTML")e.innerHTML=v;else if(k==="value")e.value=v;else if(k==="type")e.type=v;else if(k==="placeholder")e.placeholder=v;else if(k==="disabled")e.disabled=v;else if(k==="rows")e.rows=v;else if(k==="selected")e.selected=v;else if(k==="id")e.id=v;else if(k==="autoFocus")setTimeout(()=>e.focus(),50);else if(k==="accept")e.accept=v;else e.setAttribute(k,v)});c.flat(9).forEach(c=>{if(c==null||c===false)return;if(typeof c==="string"||typeof c==="number")e.appendChild(document.createTextNode(c));else if(c instanceof Node)e.appendChild(c)});return e}
+const sbadge=s=>{const x=STAT[s];return x?h("span",{className:"badge",style:{background:x.bg,color:x.color}},x.label):h("span")};
+
+let CU=null,AR=null,RD=null; // currentUser, activeRole, roleData
+function showToast(m,t){const ex=document.querySelector('.toast');if(ex)ex.remove();const el=h("div",{className:"toast",style:{background:t==="success"?"#16a34a":"#ef4444"}},t==="success"?"✅ ":"❌ ",m);document.body.appendChild(el);setTimeout(()=>el.remove(),4000)}
+
+function makePDF(a){const st=(a.approvals||[]).map(x=>'<div style="margin-top:12px;padding:10px;border:1px solid #ddd;border-radius:6px"><b style="color:'+(x.action==="approve"?"#16a34a":"#ef4444")+'">'+x.role+' — '+(x.action==="approve"?"Approved":"Rejected")+'</b><div style="font-size:11px;color:#666">By: '+x.by+' | '+fd(x.date)+'</div>'+(x.comment?'<div style="font-size:12px;margin-top:2px">'+x.comment+'</div>':'')+'</div>').join("");const ht='<!DOCTYPE html><html><head><style>body{font-family:Georgia,serif;padding:50px;color:#1a1a1a;max-width:700px;margin:0 auto}h1{font-size:20px;text-align:center;border-bottom:2px solid #1a1a1a;padding-bottom:10px}.u{text-align:center;font-size:12px;color:#555;margin-bottom:24px}.f{margin-bottom:8px;display:flex;gap:8px}.fl{font-weight:bold;font-size:12px;color:#555;min-width:150px}.fv{font-size:13px}.ct{background:#f9f9f9;padding:16px;border-left:3px solid #2563eb;margin:16px 0;line-height:1.8;white-space:pre-wrap;font-size:13px}.bg{text-align:center;margin-top:24px;padding:12px;background:#dcfce7;border:2px solid #16a34a;border-radius:8px;font-size:16px;font-weight:bold;color:#16a34a}.ft{margin-top:30px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px}</style></head><body><h1>Official Application</h1><div class="u">'+(a.department||'')+' - Amity University</div><div class="f"><div class="fl">Application No:</div><div class="fv">'+a.appNumber+'</div></div><div class="f"><div class="fl">Date:</div><div class="fv">'+fd(a.createdAt)+'</div></div><div class="f"><div class="fl">Student:</div><div class="fv">'+a.studentName+'</div></div><div class="f"><div class="fl">Father:</div><div class="fv">'+(a.fatherName||'')+'</div></div><div class="f"><div class="fl">Mother:</div><div class="fv">'+(a.motherName||'')+'</div></div><div class="f"><div class="fl">Enrollment:</div><div class="fv">'+a.enrollmentNo+'</div></div><div class="f"><div class="fl">Program:</div><div class="fv">'+a.program+'</div></div><div class="f"><div class="fl">Sem/Sec:</div><div class="fv">Sem '+a.semester+' - Sec '+a.section+'</div></div><div class="f"><div class="fl">Subject:</div><div class="fv">'+a.subject+'</div></div><div style="margin-top:14px;font-weight:bold;font-size:12px;color:#555">APPLICATION CONTENT</div><div class="ct">'+a.content+'</div>'+st+(a.status==="approved"?'<div class="bg">OFFICIALLY APPROVED</div>':'')+'<div class="ft">SmartApply - Amity University</div></body></html>';const w=window.open("","_blank");w.document.write(ht);w.document.close();setTimeout(()=>w.print(),500)}
+
+function showPwModal(){const ex=document.getElementById("pw-modal");if(ex)ex.remove();document.body.appendChild(h("div",{id:"pw-modal",className:"modal-bg"},h("div",{className:"modal"},h("h3",{style:{fontSize:"18px",fontWeight:700,marginBottom:"16px"}},"🔒 Change Password"),h("div",{id:"pw-err"}),h("div",{style:{marginBottom:"12px"}},h("label",{className:"lbl"},"Current Password"),h("input",{id:"pw-cur",className:"inp",type:"password"})),h("div",{style:{marginBottom:"12px"}},h("label",{className:"lbl"},"New Password"),h("input",{id:"pw-new",className:"inp",type:"password"})),h("div",{style:{marginBottom:"16px"}},h("label",{className:"lbl"},"Confirm"),h("input",{id:"pw-cnf",className:"inp",type:"password"})),h("div",{style:{display:"flex",gap:"10px"}},h("button",{className:"btn",style:{background:"#16a34a",flex:1},onClick:async()=>{const c=document.getElementById("pw-cur").value,n=document.getElementById("pw-new").value,cf=document.getElementById("pw-cnf").value,ed=document.getElementById("pw-err");ed.innerHTML="";if(!c||!n||!cf){ed.innerHTML='<div style="background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px">All fields required.</div>';return}if(n!==cf){ed.innerHTML='<div style="background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px">Passwords don\'t match.</div>';return}try{await API.post("/auth/change-password",{currentPassword:c,newPassword:n});document.getElementById("pw-modal").remove();showToast("Password changed!","success")}catch(e){ed.innerHTML='<div style="background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px">'+e.message+'</div>'}}},"✓ Change"),h("button",{className:"btn",style:{background:"#6b7280",flex:1},onClick:()=>document.getElementById("pw-modal").remove()},"Cancel")))))}
+
+function roleDesc(r){
+  const ri=RINFO[r.role]||{};let desc=ri.label||r.role;
+  if(r.role==="hod"&&r.deptId)desc+=" — "+(DEPTS[r.deptId]?.short||r.deptId);
+  if(r.role==="pl")desc+=" — "+r.program+" S"+r.semester+"-"+r.section;
+  if(r.role==="coordinator")desc+=" (All Departments)";
+  return desc;
+}
+
+function logout(){API.setToken(null);CU=null;AR=null;RD=null;renderLogin()}
+
+// ═══════════════════════════════════════
+// LOGIN + ROLE PICKER
+// ═══════════════════════════════════════
+function renderLogin(){
+  const root=document.getElementById("app");root.innerHTML="";
+  root.appendChild(h("div",{className:"login-bg"},h("div",{style:{width:"100%",maxWidth:"520px",padding:"20px",position:"relative",zIndex:1}},
+    h("div",{style:{textAlign:"center",marginBottom:"28px"}},h("div",{style:{fontSize:"48px",marginBottom:"8px"}},"📝"),h("h1",{style:{fontSize:"32px",fontWeight:800,color:"white"}},"SmartApply"),h("p",{style:{color:"#94a3b8",fontSize:"14px",marginTop:"8px"}},"AI-Powered Application System • Amity University")),
+    h("div",{className:"card",style:{padding:"28px"}},
+      h("div",{style:{marginBottom:"16px"}},
+        h("div",{style:{display:"flex",alignItems:"center",gap:"6px",marginBottom:"14px"}},h("span",{style:{fontSize:"16px"}},"🔐"),h("span",{style:{fontSize:"14px",fontWeight:700}},"Login")),
+        h("div",{id:"login-err"}),
+        h("div",{style:{marginBottom:"12px"}},h("label",{className:"lbl"},"User ID *"),h("input",{id:"login-uid",className:"inp",placeholder:"Enter your User ID",autoFocus:true,onKeydown:e=>{if(e.key==="Enter")doLogin()}})),
+        h("div",{style:{marginBottom:"12px"}},h("label",{className:"lbl"},"Password *"),h("div",{style:{position:"relative"}},h("input",{id:"login-pw",className:"inp",type:"password",placeholder:"Enter password",style:{paddingRight:"44px"},onKeydown:e=>{if(e.key==="Enter")doLogin()}}),h("button",{style:{position:"absolute",right:"8px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",fontSize:"16px",padding:"4px"},onClick:()=>{const el=document.getElementById("login-pw");el.type=el.type==="password"?"text":"password"}},"👁️")))
+      ),
+      h("button",{id:"login-btn",className:"btn",style:{width:"100%",background:"#2563eb"},onClick:doLogin},"🔐 Login"),
+      h("p",{style:{fontSize:"11px",color:"#999",marginTop:"12px",textAlign:"center"}},"All roles (Admin, Student, Coordinator, PL, HOD) use the same login. If you have multiple roles, you'll choose one after login.")
+    ),
+    h("p",{style:{textAlign:"center",color:"#475569",fontSize:"11px",marginTop:"14px"}},"SmartApply Multi-Role • Amity University")
+  )));
+}
+
+async function doLogin(){
+  const uid=(document.getElementById("login-uid")||{}).value||"";
+  const pw=(document.getElementById("login-pw")||{}).value||"";
+  if(!uid.trim()||!pw.trim()){showToast("Enter User ID and Password","error");return}
+  const errDiv=document.getElementById("login-err");if(errDiv)errDiv.innerHTML="";
+  const btn=document.getElementById("login-btn");if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Logging in...';}
+  try{
+    const data=await API.post("/auth/login",{userId:uid.trim(),password:pw});
+    if(data.needsRoleSelect){
+      // Multiple roles — show role picker
+      showRolePicker(data.user, data.tempUserId);
+    }else{
+      // Single role — go straight to dashboard
+      API.setToken(data.token);CU=data.user;AR=data.activeRole;RD=data.roleData;
+      if(AR==="admin")renderAdmin();else renderDashboard();
+    }
+  }catch(e){
+    if(errDiv)errDiv.innerHTML='<div style="background:#fef2f2;color:#dc2626;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid #fecaca">⚠️ '+e.message+'</div>';
+    if(btn){btn.disabled=false;btn.textContent="🔐 Login"}
+  }
+}
+
+function showRolePicker(user, tempUserId){
+  const root=document.getElementById("app");root.innerHTML="";
+  const roles=user.roles||[];
+
+  root.appendChild(h("div",{className:"login-bg"},h("div",{style:{width:"100%",maxWidth:"520px",padding:"20px",position:"relative",zIndex:1}},
+    h("div",{style:{textAlign:"center",marginBottom:"24px"}},
+      h("div",{style:{fontSize:"40px",marginBottom:"6px"}},"👤"),
+      h("h2",{style:{fontSize:"24px",fontWeight:800,color:"white"}},"Welcome, "+user.name),
+      h("p",{style:{color:"#94a3b8",fontSize:"14px",marginTop:"6px"}},"You have "+roles.length+" roles. Choose one to continue:")
+    ),
+    h("div",{className:"card",style:{padding:"24px"}},
+      ...roles.map(r=>{
+        const ri=RINFO[r.role]||{label:r.role,color:"#555",icon:"👤"};
+        return h("button",{className:"role-card",style:{display:"block",marginBottom:"10px",borderColor:"#e5e7eb"},
+          onMouseover:e=>{e.currentTarget.style.borderColor=ri.color;e.currentTarget.style.background=ri.color+"08"},
+          onMouseout:e=>{e.currentTarget.style.borderColor="#e5e7eb";e.currentTarget.style.background="white"},
+          onClick:async()=>{
+            try{
+              const data=await API.post("/auth/select-role",{tempUserId,roleId:r._id});
+              API.setToken(data.token);CU=data.user;AR=data.activeRole;RD=data.roleData;
+              if(AR==="admin")renderAdmin();else renderDashboard();
+            }catch(e){showToast(e.message,"error")}
+          }},
+          h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}},
+            h("span",{style:{fontSize:"24px"}},ri.icon),
+            h("div",{},
+              h("div",{style:{fontWeight:700,fontSize:"14px",color:ri.color}},ri.label),
+              h("div",{style:{fontSize:"12px",color:"#888",marginTop:"2px"}},roleDesc(r))
+            )
+          )
+        );
+      }),
+      h("button",{style:{marginTop:"8px",background:"none",border:"none",color:"#888",fontSize:"13px",fontWeight:600,textDecoration:"underline",width:"100%",textAlign:"center",padding:"8px"},onClick:renderLogin},"← Back to Login")
+    )
+  )));
+}
+
+// ═══════════════════════════════════════
+// ADMIN — same as before but adds roles to existing users
+// ═══════════════════════════════════════
+async function renderAdmin(){
+  const root=document.getElementById("app");root.innerHTML="";
+  let tab="students",students=[],staff=[];
+  async function load(){try{const[s,st]=await Promise.all([API.get("/admin/students"),API.get("/admin/staff")]);students=s.students;staff=st.staff}catch(e){}}
+  await load();
+
+  function draw(){
+    root.innerHTML="";
+    const hods=staff.filter(u=>u.roles.some(r=>r.role==="hod"));
+    const coords=staff.filter(u=>u.roles.some(r=>r.role==="coordinator"));
+    const pls=staff.filter(u=>u.roles.some(r=>r.role==="pl"));
+
+    const page=h("div",{style:{minHeight:"100vh",background:"#f5f6fa"}},
+      h("div",{className:"hdr"},
+        h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},h("span",{style:{fontSize:"22px"}},"📝"),h("span",{style:{fontWeight:800,fontSize:"17px"}},"SmartApply"),h("span",{className:"badge",style:{background:"#dc262615",color:"#dc2626"}},"⚙️ Admin")),
+        h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}},h("button",{style:{background:"#f1f5f9",border:"none",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:600,color:"#555"},onClick:showPwModal},"🔒"),h("button",{style:{background:"#f1f5f9",border:"none",padding:"6px 12px",borderRadius:"6px",fontSize:"12px",fontWeight:600,color:"#888"},onClick:logout},"Logout"))
+      ),
+      h("div",{style:{maxWidth:"960px",margin:"0 auto",padding:"20px"}},
+        // Info banner
+        h("div",{style:{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:"10px",padding:"12px 16px",marginBottom:"16px",fontSize:"13px",color:"#1e40af"}},
+          "💡 <strong>Multi-Role System:</strong> If a person needs multiple roles (e.g., HOD + PL + Coordinator), use the <strong>same User ID</strong> when adding each role. The system will add the new role to their existing account."
+        ),
+        h("div",{style:{display:"flex",gap:"6px",marginBottom:"18px",flexWrap:"wrap"}},
+          ...[["students","📁 Students ("+students.length+")","#2563eb"],["hods","🏛️ HODs ("+hods.length+")","#be123c"],["coordinators","📋 Coordinators ("+coords.length+")","#f59e0b"],["pls","📊 PLs ("+pls.length+")","#7c3aed"]].map(([k,l,c])=>
+            h("button",{style:{padding:"9px 18px",borderRadius:"8px",border:"none",background:tab===k?c:"#e5e7eb",color:tab===k?"white":"#666",fontSize:"13px",fontWeight:600},onClick:()=>{tab=k;draw()}},l))
+        ),
+
+        // Students
+        ...(tab==="students"?[
+          h("div",{style:{background:"white",borderRadius:"14px",padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,.06)",marginBottom:"16px"}},
+            h("h3",{style:{fontSize:"14px",fontWeight:700,marginBottom:"14px"}},"📁 Upload Student Excel"),
+            h("div",{className:"upload-zone",onClick:()=>document.getElementById("f-inp").click()},h("div",{style:{fontSize:"32px",marginBottom:"8px"}},"📤"),h("p",{style:{fontSize:"14px",fontWeight:600}},"Click to upload"),h("p",{style:{fontSize:"12px",color:"#888"}},"Columns: UserID, Password, Name, FatherName, MotherName, EnrollmentNo, Email"),
+              h("input",{id:"f-inp",type:"file",accept:".xlsx,.xls,.csv",style:{display:"none"},onChange:async e=>{const f=e.target.files[0];if(!f)return;const fd=new FormData();fd.append("file",f);try{const r=await API.upload("/admin/students/upload",fd);showToast(r.message,"success");await load();draw()}catch(e){showToast(e.message,"error")}}}))
+          ),
+          h("div",{style:{background:"white",borderRadius:"14px",padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,.06)"}},
+            h("h3",{style:{fontSize:"14px",fontWeight:700,marginBottom:"12px"}},"Students ("+students.length+")"),
+            ...(students.length===0?[h("p",{style:{color:"#999"}},"None")]:[
+              h("div",{style:{overflowX:"auto",maxHeight:"400px",overflowY:"auto"}},
+                h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:"11px"}},
+                  h("thead",{},h("tr",{style:{borderBottom:"2px solid #e5e7eb",position:"sticky",top:0,background:"white"}},...["UserID","Name","Father","Enrollment","Email","Roles"].map(x=>h("th",{style:{padding:"8px 6px",color:"#888",fontWeight:600,textAlign:"left"}},x)))),
+                  h("tbody",{},...students.map((s,i)=>h("tr",{style:{borderBottom:"1px solid #f0f0f0",background:i%2?"white":"#f9fafb"}},
+                    h("td",{style:{padding:"7px 6px",fontWeight:600}},s.userId),h("td",{style:{padding:"7px 6px"}},s.name),h("td",{style:{padding:"7px 6px",color:"#666"}},s.fatherName||""),h("td",{style:{padding:"7px 6px"}},s.enrollmentNo||""),h("td",{style:{padding:"7px 6px",color:"#888"}},s.email||""),
+                    h("td",{style:{padding:"7px 6px"}},...(s.roles||[]).map(r=>h("span",{className:"badge",style:{background:(RINFO[r.role]?.color||"#555")+"20",color:RINFO[r.role]?.color||"#555",marginRight:"4px"}},r.role)))
+                  )))
+                ))
+            ])
+          )
+        ]:[]),
+
+        // Staff tabs
+        ...((tab==="hods"||tab==="coordinators"||tab==="pls")?[(()=>{
+          const rr=tab==="hods"?"hod":tab==="coordinators"?"coordinator":"pl";
+          const rl=tab==="hods"?"HOD":tab==="coordinators"?"Coordinator":"Program Leader";
+          const rc=tab==="hods"?"#be123c":tab==="coordinators"?"#f59e0b":"#7c3aed";
+          const needD=rr==="hod",needS=rr==="pl";
+
+          // Flatten: one row per role assignment
+          const roleRows=[];
+          staff.forEach(u=>{u.roles.filter(r=>r.role===rr).forEach(r=>{roleRows.push({user:u,roleAssignment:r})})});
+
+          return h("div",{},
+            h("div",{style:{background:"white",borderRadius:"14px",padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,.06)",marginBottom:"16px"}},
+              h("h3",{style:{fontSize:"14px",fontWeight:700,marginBottom:"4px"}},"Add "+rl),
+              h("p",{style:{fontSize:"12px",color:"#888",marginBottom:"14px"}},
+                rr==="hod"?"One HOD per department. If user already exists, the HOD role will be added to their account.":
+                rr==="coordinator"?"Common across all departments. If user already exists, coordinator role will be added.":
+                "Assigned to program+semester+section. If user already exists, PL role will be added."
+              ),
+              h("div",{className:"g2",style:{marginBottom:"12px"}},
+                h("div",{},h("label",{className:"lbl"},"User ID * (existing or new)"),h("input",{id:"sf-uid",className:"inp",placeholder:"e.g. HOD01 — use same ID to add role to existing user"})),
+                h("div",{},h("label",{className:"lbl"},"Password (only for new users)"),h("input",{id:"sf-pw",className:"inp",placeholder:"Leave empty if user already exists"}))
+              ),
+              h("div",{className:"g2",style:{marginBottom:"12px"}},
+                h("div",{},h("label",{className:"lbl"},"Name *"),h("input",{id:"sf-name",className:"inp",placeholder:"Dr. / Prof."})),
+                h("div",{},h("label",{className:"lbl"},"Email"),h("input",{id:"sf-email",className:"inp",placeholder:"name@amity.edu"}))
+              ),
+              ...(needD?[h("div",{style:{marginBottom:"12px"}},h("label",{className:"lbl"},"Department *"),h("select",{id:"sf-dept",className:"sel"},h("option",{value:""},"Select..."),...Object.entries(DEPTS).map(([id,d])=>h("option",{value:id},d.name))))]:[]),
+              ...(needS?[h("div",{id:"pl-sel"})]:[]),
+              h("button",{className:"btn",style:{background:rc},onClick:async()=>{
+                const uid=document.getElementById("sf-uid")?.value?.trim();
+                const pw=document.getElementById("sf-pw")?.value?.trim();
+                const name=document.getElementById("sf-name")?.value?.trim();
+                const email=document.getElementById("sf-email")?.value?.trim();
+                if(!uid||!name){showToast("User ID and Name required","error");return}
+                const body={userId:uid,password:pw||undefined,name,email,role:rr};
+                if(needD){const d=document.getElementById("sf-dept")?.value;if(!d){showToast("Select department","error");return}body.deptId=d}
+                if(needS){const pr=document.getElementById("sf-prog")?.value,sm=document.getElementById("sf-sem")?.value,sc=document.getElementById("sf-sec")?.value;if(!pr||!sm||!sc){showToast("Select program/semester/section","error");return}body.program=pr;body.semester=parseInt(sm);body.section=sc}
+                try{const r=await API.post("/admin/staff",body);showToast(r.message,"success");await load();draw()}catch(e){showToast(e.message,"error")}
+              }},"✓ Add "+rl+" Role")
+            ),
+            h("div",{style:{background:"white",borderRadius:"14px",padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,.06)"}},
+              h("h3",{style:{fontSize:"14px",fontWeight:700,marginBottom:"12px"}},rl+" Assignments ("+roleRows.length+")"),
+              ...(roleRows.length===0?[h("p",{style:{color:"#999"}},"None")]:[
+                ...roleRows.map(({user:u,roleAssignment:ra},i)=>h("div",{style:{display:"flex",justifyContent:"space-between",padding:"10px 14px",background:i%2?rc+"08":"white",borderRadius:"8px",marginBottom:"4px",alignItems:"center",flexWrap:"wrap",gap:"6px",fontSize:"12px"}},
+                  h("div",{style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}},
+                    h("span",{className:"badge",style:{background:rc+"20",color:rc}},u.userId),
+                    h("strong",{},u.name),h("span",{style:{color:"#888"}},u.email||""),
+                    ...(ra.deptId&&rr==="hod"?[h("span",{style:{color:"#666"}},"• "+(DEPTS[ra.deptId]?.short||""))]:[]),
+                    ...(ra.program?[h("span",{className:"badge",style:{background:"#ede9fe",color:"#7c3aed"}},ra.program+" S"+ra.semester+"-"+ra.section)]:[]),
+                    u.roles.length>1?h("span",{className:"badge",style:{background:"#dbeafe",color:"#2563eb"}},u.roles.length+" roles"):null
+                  ),
+                  h("button",{style:{background:"#fef2f2",border:"none",color:"#ef4444",padding:"4px 10px",borderRadius:"6px",fontSize:"11px",fontWeight:600},onClick:async()=>{
+                    try{await API.del("/admin/staff/"+u.userId+"/role/"+ra._id);showToast("Role removed","success");await load();draw()}catch(e){showToast(e.message,"error")}
+                  }},"Remove Role")
+                ))
+              ])
+            )
+          );
+        })()]:[])
+      )
+    );
+    root.appendChild(page);
+    // PL dynamic selectors
+    if(tab==="pls"){const c=document.getElementById("pl-sel");if(c){let sp="",ss="";function dp(){c.innerHTML="";const ms=sp&&PROGS[sp]?PROGS[sp].sem:0;c.appendChild(h("div",{className:"g3",style:{marginBottom:"12px"}},h("div",{},h("label",{className:"lbl"},"Program *"),h("select",{id:"sf-prog",className:"sel",onChange:e=>{sp=e.target.value;ss="";dp()}},h("option",{value:""},"Select..."),...Object.keys(PROGS).map(p=>h("option",{value:p,selected:sp===p},p)))),
+      ...(sp?[h("div",{},h("label",{className:"lbl"},"Semester *"),h("select",{id:"sf-sem",className:"sel",onChange:e=>{ss=e.target.value;dp()}},h("option",{value:""},"Select..."),...Array.from({length:ms},(_,i)=>h("option",{value:i+1,selected:parseInt(ss)===i+1},"Sem "+(i+1)))))]:[]),
+      ...(ss?[h("div",{},h("label",{className:"lbl"},"Section *"),h("select",{id:"sf-sec",className:"sel"},h("option",{value:""},"Select..."),...SECS.map(s=>h("option",{value:s},"Sec "+s))))]:[])
+    ))}dp()}}
+  }
+  draw();
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD — shows active role, switch role button
+// ═══════════════════════════════════════
+async function renderDashboard(){
+  const root=document.getElementById("app");root.innerHTML="";
+  const rc=RINFO[AR]?.color||"#555";
+  let tab=AR==="student"?"all":"pending",apps=[];
+  try{const r=await API.get("/applications");apps=r.applications}catch(e){}
+
+  function draw(){
+    root.innerHTML="";
+    const pend=apps.filter(a=>{if(AR==="coordinator")return a.status==="pending_coordinator";if(AR==="pl")return a.status==="pending_pl";if(AR==="hod")return a.status==="pending_hod";return false});
+    const appr=apps.filter(a=>a.status==="approved");
+    const tabs=AR==="student"?[["all","All"],["approved","Approved"],["rejected","Rejected"]]:[["pending","Pending ("+pend.length+")"],["processed","Processed"],["all","All"]];
+    const shown=(()=>{if(AR==="student"){if(tab==="approved")return appr;if(tab==="rejected")return apps.filter(a=>a.status.startsWith("rejected"));return apps}if(tab==="pending")return pend;if(tab==="processed")return apps.filter(a=>!a.status.startsWith("pending"));return apps})();
+    const hasMultiRoles=CU&&CU.roles&&CU.roles.length>1;
+
+    root.appendChild(h("div",{style:{minHeight:"100vh",background:"#f5f6fa"}},
+      h("div",{className:"hdr"},
+        h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},h("span",{style:{fontSize:"22px"}},"📝"),h("span",{style:{fontWeight:800,fontSize:"17px"}},"SmartApply")),
+        h("div",{style:{display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap"}},
+          h("span",{className:"badge",style:{background:rc+"15",color:rc,padding:"5px 14px"}},(RINFO[AR]?.icon||"")+" "+(RINFO[AR]?.label||AR)+" — "+CU.name),
+          ...(hasMultiRoles?[h("button",{style:{background:"#dbeafe",border:"none",padding:"5px 12px",borderRadius:"6px",fontSize:"11px",fontWeight:600,color:"#2563eb"},onClick:()=>showRolePicker(CU,CU._id)},"🔄 Switch Role")]:[]),
+          h("button",{style:{background:"#f1f5f9",border:"none",padding:"5px 12px",borderRadius:"6px",fontSize:"11px",fontWeight:600,color:"#555"},onClick:showPwModal},"🔒"),
+          h("button",{style:{background:"#f1f5f9",border:"none",padding:"5px 12px",borderRadius:"6px",fontSize:"11px",fontWeight:600,color:"#888"},onClick:logout},"Logout"))
+      ),
+      h("div",{style:{maxWidth:"900px",margin:"0 auto",padding:"20px"}},
+        h("div",{className:"gs",style:{marginBottom:"20px"}},
+          ...(AR==="student"?[
+            h("div",{className:"stat",style:{borderLeft:"4px solid #2563eb"}},h("div",{style:{fontSize:"11px",color:"#888",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Total"),h("div",{style:{fontSize:"24px",fontWeight:700}},String(apps.length))),
+            h("div",{className:"stat",style:{borderLeft:"4px solid #f59e0b"}},h("div",{style:{fontSize:"11px",color:"#888",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Pending"),h("div",{style:{fontSize:"24px",fontWeight:700}},String(apps.filter(a=>a.status.startsWith("pending")).length))),
+            h("div",{className:"stat",style:{borderLeft:"4px solid #16a34a"}},h("div",{style:{fontSize:"11px",color:"#888",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Approved"),h("div",{style:{fontSize:"24px",fontWeight:700}},String(appr.length)))
+          ]:[
+            h("div",{className:"stat",style:{borderLeft:"4px solid "+rc}},h("div",{style:{fontSize:"11px",color:"#888",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Pending"),h("div",{style:{fontSize:"24px",fontWeight:700}},String(pend.length))),
+            h("div",{className:"stat",style:{borderLeft:"4px solid #16a34a"}},h("div",{style:{fontSize:"11px",color:"#888",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Processed"),h("div",{style:{fontSize:"24px",fontWeight:700}},String(apps.filter(a=>!a.status.startsWith("pending")).length))),
+            h("div",{className:"stat",style:{borderLeft:"4px solid #555"}},h("div",{style:{fontSize:"11px",color:"#888",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Total"),h("div",{style:{fontSize:"24px",fontWeight:700}},String(apps.length)))
+          ])
+        ),
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},
+          h("div",{style:{display:"flex",gap:"4px"}},...tabs.map(([k,l])=>h("button",{style:{padding:"7px 14px",borderRadius:"8px",border:"none",background:tab===k?rc:"#e5e7eb",color:tab===k?"white":"#666",fontSize:"12px",fontWeight:600},onClick:()=>{tab=k;draw()}},l))),
+          ...(AR==="student"?[h("button",{className:"btn",style:{background:"#2563eb",fontSize:"13px",padding:"9px 18px"},onClick:renderNewApp},"+ New Application")]:[])
+        ),
+        ...(shown.length===0?[h("div",{style:{textAlign:"center",padding:"40px",color:"#aaa"}},h("div",{style:{fontSize:"40px",marginBottom:"8px"}},"📭"),h("p",{},"No applications"))]:
+          shown.map(a=>h("div",{className:"item",onClick:()=>renderDetailView(a._id)},h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"6px"}},h("div",{style:{flex:1}},h("div",{style:{fontWeight:600,fontSize:"13px",marginBottom:"3px"}},a.subject),h("div",{style:{fontSize:"11px",color:"#888"}},a.appNumber+" • "+a.studentName+" • "+a.program+" S"+a.semester+"-"+a.section+" • "+fd(a.createdAt))),sbadge(a.status)))))
+      )
+    ));
+  }
+  draw();
+}
+
+// ═══════════════════════════════════════
+// DETAIL
+// ═══════════════════════════════════════
+async function renderDetailView(id){
+  const root=document.getElementById("app");root.innerHTML="";let app;
+  try{const r=await API.get("/applications/"+id);app=r.application}catch(e){showToast(e.message,"error");renderDashboard();return}
+  const rc=RINFO[AR]?.color||"#555";
+  const canAct=(AR==="coordinator"&&app.status==="pending_coordinator")||(AR==="pl"&&app.status==="pending_pl")||(AR==="hod"&&app.status==="pending_hod");
+
+  root.appendChild(h("div",{style:{minHeight:"100vh",background:"#f5f6fa"}},
+    h("div",{className:"hdr"},h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},h("span",{style:{fontSize:"22px"}},"📝"),h("span",{style:{fontWeight:800,fontSize:"17px"}},"SmartApply")),h("div",{style:{display:"flex",alignItems:"center",gap:"10px"}},h("span",{className:"badge",style:{background:rc+"15",color:rc,padding:"5px 14px"}},(RINFO[AR]?.icon||"")+" "+CU.name))),
+    h("div",{style:{maxWidth:"900px",margin:"0 auto",padding:"20px"}},
+      h("button",{style:{background:"#f1f5f9",border:"none",padding:"7px 14px",borderRadius:"8px",fontWeight:600,color:"#555",fontSize:"13px",marginBottom:"14px"},onClick:renderDashboard},"← Back"),
+      h("div",{style:{background:"white",borderRadius:"14px",padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,.06)"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},h("div",{},h("h2",{style:{fontSize:"18px",fontWeight:700}},app.subject),h("p",{style:{color:"#888",fontSize:"12px",marginTop:"2px"}},app.appNumber)),sbadge(app.status)),
+        h("div",{className:"info g2",style:{marginBottom:"14px",fontSize:"12px"}},...["Name:"+app.studentName,"Enrollment:"+app.enrollmentNo,"Father:"+(app.fatherName||"—"),"Mother:"+(app.motherName||"—"),"Program:"+app.program,"Sem/Sec:Sem "+app.semester+" — Sec "+app.section,"Dept:"+(app.department||""),"Email:"+(app.studentEmail||""),"Coordinator:"+app.coordinatorName,"PL:"+app.plName,"HOD:"+app.hodName].map(f=>{const[l,v]=f.split(":");return h("div",{},h("span",{style:{color:"#64748b"}},l+": "),h("strong",{},v))})),
+        h("div",{style:{background:"#f8fafc",borderRadius:"10px",padding:"16px",marginBottom:"16px",lineHeight:"1.8",whiteSpace:"pre-wrap",fontSize:"14px",borderLeft:"3px solid #2563eb"}},app.content),
+        ...(app.approvals?.length?[h("div",{style:{marginBottom:"14px"}},h("h4",{style:{fontSize:"13px",color:"#555",marginBottom:"8px"}},"Approval Trail"),...app.approvals.map(a=>h("div",{style:{display:"flex",gap:"10px",padding:"8px 12px",background:a.action==="approve"?"#f0fdf4":"#fef2f2",borderRadius:"8px",marginBottom:"5px",fontSize:"12px",alignItems:"center"}},h("span",{style:{fontSize:"16px"}},a.action==="approve"?"✅":"❌"),h("div",{},h("strong",{},a.role)," — "+(a.action==="approve"?"Approved":"Rejected")+" by "+a.by,h("div",{style:{color:"#888",fontSize:"11px"}},fd(a.date)),a.comment?h("div",{style:{marginTop:"2px",color:"#555",fontStyle:"italic"}},'"'+a.comment+'"'):null))))]:[]),
+        ...(canAct?[h("div",{style:{borderTop:"1px solid #e5e7eb",paddingTop:"16px"}},h("textarea",{id:"act-cm",className:"inp",rows:2,placeholder:"Comment...",style:{marginBottom:"10px",resize:"vertical"}}),h("div",{style:{display:"flex",gap:"10px"}},
+          h("button",{className:"btn",style:{background:"#16a34a",flex:1},onClick:async()=>{try{await API.post("/applications/"+app._id+"/action",{action:"approve",comment:document.getElementById("act-cm")?.value||""});showToast("Approved!","success");renderDashboard()}catch(e){showToast(e.message,"error")}}},"✓ Approve"),
+          h("button",{className:"btn",style:{background:"#ef4444",flex:1},onClick:async()=>{try{await API.post("/applications/"+app._id+"/action",{action:"reject",comment:document.getElementById("act-cm")?.value||""});showToast("Rejected","error");renderDashboard()}catch(e){showToast(e.message,"error")}}},"✗ Reject")))]:[]),
+        ...(app.status==="approved"?[h("button",{style:{width:"100%",padding:"13px",borderRadius:"10px",border:"2px solid #16a34a",background:"#f0fdf4",color:"#16a34a",fontSize:"14px",fontWeight:700,cursor:"pointer",marginTop:"10px"},onClick:()=>makePDF(app)},"📥 Download PDF")]:[])
+      )
+    )
+  ));
+}
+
+// ═══════════════════════════════════════
+// NEW APPLICATION
+// ═══════════════════════════════════════
+async function renderNewApp(){
+  const root=document.getElementById("app");root.innerHTML="";
+  let prog="",sem="",sec="",ci="",subj="",cont="",prm="",ail=false,aim="write",allCoords=[],pl=null,hod=null;
+  try{const r=await API.get("/applications/data/coordinators");allCoords=r.coordinators}catch(e){}
+
+  function draw(){
+    root.innerHTML="";const ms=prog&&PROGS[prog]?PROGS[prog].sem:0,di=prog&&PROGS[prog]?PROGS[prog].dept:null,dp=di?DEPTS[di]:null,sc=ci!==""?allCoords[parseInt(ci)]:null,can=prog&&sem&&sec&&sc&&subj&&cont;
+    const doAI=async()=>{if(aim==="write"&&!prm.trim())return;if(aim!=="write"&&!cont.trim())return;ail=true;draw();try{let sys,p;if(aim==="write"){sys="You write formal Amity University applications. ONLY body. No headers. Greeting first. 150-250 words. Line 1: \"Subject: ...\" then blank then body.";p="Student: "+CU.name+"\nEnrollment: "+CU.enrollmentNo+"\nProgram: "+prog+" (Sem "+sem+", Sec "+sec+")\nDate: "+td()+"\n\nRequest: "+prm}else if(aim==="improve"){sys="Improve professionally. Only text.";p=cont}else{sys="Fix grammar. Only text.";p=cont}const r=await API.post("/ai/generate",{prompt:p,system:sys});const t=r.text;if(aim==="write"){const ln=t.split("\n");let sb="",bs=0;for(let i=0;i<ln.length;i++){if(ln[i].toLowerCase().startsWith("subject:")){sb=ln[i].replace(/^subject:\s*/i,"").trim();bs=i+1;while(bs<ln.length&&!ln[bs].trim())bs++;break}}if(sb){subj=sb;cont=ln.slice(bs).join("\n").trim()}else cont=t}else cont=t}catch(e){cont=cont||"AI unavailable."}ail=false;draw()};
+    const doSubmit=async()=>{if(!can)return;try{await API.post("/applications",{subject:subj,content:cont,program:prog,semester:parseInt(sem),section:sec,department:dp?.name||"",deptId:di,coordinatorName:sc.name,coordinatorUserId:sc.userId,plName:pl?.name||"Unassigned",plUserId:pl?.userId||"",hodName:hod?.name||"Unassigned",hodUserId:hod?.userId||""});showToast("Submitted!","success");renderDashboard()}catch(e){showToast(e.message,"error")}};
+
+    root.appendChild(h("div",{style:{minHeight:"100vh",background:"#f5f6fa"}},h("div",{style:{maxWidth:"900px",margin:"0 auto",padding:"20px"}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"18px"}},h("h2",{style:{fontSize:"20px",fontWeight:700}},"New Application"),h("button",{style:{background:"#f1f5f9",border:"none",padding:"7px 14px",borderRadius:"8px",fontWeight:600,color:"#555",fontSize:"13px"},onClick:renderDashboard},"← Back")),
+      h("div",{style:{background:"white",borderRadius:"14px",padding:"24px",boxShadow:"0 1px 4px rgba(0,0,0,.06)"}},
+        h("div",{className:"info g2",style:{marginBottom:"16px",fontSize:"13px"}},h("div",{style:{gridColumn:"1/3",fontSize:"11px",fontWeight:700,color:"#0369a1",textTransform:"uppercase",letterSpacing:"1px",marginBottom:"4px"}},"Student Information"),
+          h("div",{},h("span",{style:{color:"#64748b"}},"Name: "),h("strong",{},CU.name)),h("div",{},h("span",{style:{color:"#64748b"}},"Enrollment: "),h("strong",{},CU.enrollmentNo||"")),h("div",{},h("span",{style:{color:"#64748b"}},"Father: "),h("strong",{},CU.fatherName||"—")),h("div",{},h("span",{style:{color:"#64748b"}},"Mother: "),h("strong",{},CU.motherName||"—")),h("div",{},h("span",{style:{color:"#64748b"}},"Email: "),h("strong",{},CU.email||"")),h("div",{},h("span",{style:{color:"#64748b"}},"Date: "),h("strong",{},td()))),
+        h("div",{className:"g3",style:{marginBottom:"14px"}},
+          h("div",{},h("label",{className:"lbl"},"Program *"),h("select",{className:"sel",onChange:async e=>{prog=e.target.value;sem="";sec="";ci="";pl=hod=null;if(prog){try{const hr=await API.get("/applications/data/hod?deptId="+PROGS[prog].dept);hod=hr.hod}catch(e){}}draw()}},h("option",{value:""},"Select..."),...Object.keys(PROGS).map(p2=>h("option",{value:p2,selected:prog===p2},p2)))),
+          ...(prog?[h("div",{},h("label",{className:"lbl"},"Semester *"),h("select",{className:"sel",onChange:e=>{sem=e.target.value;sec="";pl=null;draw()}},h("option",{value:""},"Select..."),...Array.from({length:ms},(_,i)=>h("option",{value:i+1,selected:parseInt(sem)===i+1},"Sem "+(i+1)))))]:[]),
+          ...(sem?[h("div",{},h("label",{className:"lbl"},"Section *"),h("select",{className:"sel",onChange:async e=>{sec=e.target.value;if(sec&&prog&&sem){try{const r=await API.get("/applications/data/pl?program="+encodeURIComponent(prog)+"&semester="+sem+"&section="+sec);pl=r.pl}catch(e){pl=null}}draw()}},h("option",{value:""},"Select..."),...SECS.map(s2=>h("option",{value:s2,selected:sec===s2},"Sec "+s2))))]:[])
+        ),
+        h("div",{style:{marginBottom:"14px"}},h("label",{className:"lbl"},"Coordinator *"),allCoords.length>0?h("select",{className:"sel",onChange:e=>{ci=e.target.value;draw()}},h("option",{value:""},"Choose..."),...allCoords.map((c,i)=>h("option",{value:i,selected:ci===String(i)},c.name+" ("+c.email+")"))):h("div",{style:{background:"#fef3c7",borderRadius:"8px",padding:"10px",fontSize:"12px"}},"⚠️ No coordinators.")),
+        ...(prog&&sem&&sec?[h("div",{style:{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:"10px",padding:"14px",marginBottom:"16px"}},h("div",{style:{fontSize:"11px",fontWeight:700,color:"#166534",textTransform:"uppercase",letterSpacing:".5px",marginBottom:"8px"}},"Approval Route"),h("div",{style:{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap",fontSize:"12px"}},
+          h("span",{className:"badge",style:{background:sc?"#fef3c7":"#fee2e2",color:"#333"}},"📋 "+(sc?sc.name:"Select ↑")),h("span",{style:{color:"#999"}},"→"),h("span",{className:"badge",style:{background:pl?"#ede9fe":"#fee2e2",color:"#333"}},"📊 "+(pl?pl.name:"⚠️ No PL")),h("span",{style:{color:"#999"}},"→"),h("span",{className:"badge",style:{background:hod?"#fce7f3":"#fee2e2",color:"#333"}},"🏛️ "+(hod?hod.name:"⚠️ No HOD"))))]:[]),
+        h("div",{style:{background:"linear-gradient(135deg,#f8fafc,#eff6ff)",borderRadius:"10px",padding:"16px",border:"1px solid #dbeafe",marginBottom:"16px"}},h("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}},h("span",{style:{fontSize:"16px"}},"🤖"),h("span",{style:{fontSize:"14px",fontWeight:700}},"AI Writing Assistant")),
+          h("div",{style:{display:"flex",gap:"6px",marginBottom:"10px"}},...([["write","✍️ Write"],["improve","✨ Improve"],["grammar","📝 Grammar"]]).map(([m,l])=>h("button",{style:{padding:"6px 12px",borderRadius:"6px",border:aim===m?"1.5px solid #2563eb":"1.5px solid #d1d5db",background:aim===m?"#dbeafe":"white",fontSize:"12px",fontWeight:600,color:aim===m?"#1d4ed8":"#666"},onClick:()=>{aim=m;draw()}},l))),
+          ...(aim==="write"?[h("textarea",{className:"inp",rows:3,placeholder:"Describe what you need...",style:{resize:"vertical",lineHeight:"1.5"},value:prm,onInput:e=>{prm=e.target.value}})]:[]),
+          h("button",{className:"btn",style:{marginTop:"8px",background:"#2563eb",opacity:ail?.6:1},disabled:ail,onClick:doAI},ail?"⏳ Working...":aim==="write"?"🚀 Generate":aim==="improve"?"✨ Improve":"📝 Fix")),
+        h("div",{style:{marginBottom:"12px"}},h("label",{className:"lbl"},"Subject *"),h("input",{className:"inp",value:subj,placeholder:"Auto-generated or type...",onInput:e=>{subj=e.target.value}})),
+        h("div",{style:{marginBottom:"20px"}},h("label",{className:"lbl"},"Content *"),h("textarea",{className:"inp",rows:10,value:cont,placeholder:"Write or let AI generate...",style:{lineHeight:"1.7",resize:"vertical"},onInput:e=>{cont=e.target.value}})),
+        h("button",{className:"btn",style:{width:"100%",background:"#2563eb",opacity:can?1:.5},onClick:()=>{if(!can){showToast("Fill all fields","error");return}doSubmit()}},"Submit Application →"))
+    )));
+  }
+  draw();
+}
+
+// BOOT
+async function boot(){if(API.token){try{const r=await API.get("/auth/me");CU=r.user;AR=r.activeRole;RD=r.roleData;if(AR==="admin")renderAdmin();else renderDashboard();return}catch(e){API.setToken(null)}}renderLogin()}
+boot();
+</script>
+</body>
+</html>
